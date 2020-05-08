@@ -37,38 +37,21 @@ import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 
 @SuppressWarnings("serial")
-public class FilterJTextField extends JTextField {
-  private final String filterHint;
+public class FilterJTextField extends JPlaceholderTextField {
 
-  private boolean showingHint;
   private Timer timer;
-
+  
   public FilterJTextField(String hint) {
-    super(hint);
-    filterHint = hint;
+    this(hint, 1000);
+  }
 
-    showingHint = true;
-    updateStyle();
-    timer = new Timer(1000, e -> {
+  public FilterJTextField(String hint, int delay) {
+    super(hint);
+    setDisabledTextColor(Color.GRAY);
+
+    timer = new Timer(delay, e -> {
       applyFilter();
       timer.stop();
-    });
-
-    addFocusListener(new FocusListener() {
-      public void focusLost(FocusEvent focusEvent) {
-        if (getText().isEmpty()) {
-          showingHint = true;
-        }
-        updateStyle();
-      }
-
-      public void focusGained(FocusEvent focusEvent) {
-        if (showingHint) {
-          showingHint = false;
-          setText("");
-        }
-        updateStyle();
-      }
     });
 
     getDocument().addDocumentListener(new DocumentListener() {
@@ -101,7 +84,7 @@ public class FilterJTextField extends JTextField {
   }
 
   public void applyFilter() {
-    String filter = showingHint ? "" : getText();
+    String filter = getText();
     filter = filter.toLowerCase();
 
     // Replace anything but 0-9, a-z, or : with a space
@@ -114,16 +97,16 @@ public class FilterJTextField extends JTextField {
     // Empty
   }
 
-  private void updateStyle() {
-    if (showingHint) {
-      setText(filterHint);
-      setForeground(Color.gray);
-      setFont(getFont().deriveFont(Font.ITALIC));
-    } else {
-      setForeground(UIManager.getColor("TextField.foreground"));
-      setFont(getFont().deriveFont(Font.PLAIN));
-    }
-  }
+//  private void updateStyle() {
+//    if (showingHint) {
+//      setText(filterHint);
+//      setForeground(Color.gray);
+//      setFont(getFont().deriveFont(Font.ITALIC));
+//    } else {
+//      setForeground(UIManager.getColor("TextField.foreground"));
+//      setFont(getFont().deriveFont(Font.PLAIN));
+//    }
+//  }
 
   @Override
   public void paste() {
@@ -131,13 +114,6 @@ public class FilterJTextField extends JTextField {
     // Same precondition check as JTextComponent#paste().
     if (!isEditable() || !isEnabled()) {
       return;
-    }
-
-    // Disable hint to prevent the focus handler from clearing the pasted text.
-    if (showingHint) {
-      showingHint = false;
-      setText("");
-      updateStyle();
     }
 
     // Perform the paste.
