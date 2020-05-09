@@ -50,6 +50,8 @@ import cc.arduino.view.treeselector.impl.SketchSelectorDialog;
 import com.github.zafarkhaja.semver.Version;
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+
 import processing.app.debug.TargetBoard;
 import processing.app.debug.TargetPackage;
 import processing.app.debug.TargetPlatform;
@@ -165,6 +167,9 @@ public class Base {
   }
 
   static public void initLogger() {
+
+    LogManager.getLogger(Base.class); // init log4j
+    
     Handler consoleHandler = new ConsoleLogger();
     consoleHandler.setLevel(Level.ALL);
     consoleHandler.setFormatter(new LogFormatter("%1$tl:%1$tM:%1$tS [%4$7s] %2$s: %5$s%n"));
@@ -498,11 +503,6 @@ public class Base {
       // Check if there were previously opened sketches to be restored
       restoreSketches();
 
-      // Create a new empty window (will be replaced with any files to be opened)
-      if (editors.isEmpty()) {
-        handleNew();
-      }
-
       new Thread(new BuiltInCoreIsNewerCheck(this)).start();
 
       // Check for boards which need an additional core
@@ -539,13 +539,19 @@ public class Base {
    *
    * @throws Exception
    */
-  protected boolean restoreSketches() throws Exception {
+  protected void restoreSketches() throws Exception {
     // Iterate through all sketches that were open last time p5 was running.
     // If !windowPositionValid, then ignore the coordinates found for each.
-
+    
     // Save the sketch path and window placement for each open sketch
     int count = PreferencesData.getInteger("last.sketch.count");
-    int opened = 0;
+    
+    if(count <= 0) {
+      handleNew();
+      return;
+    }
+    
+    ArrayList<String> options = new ArrayList<>();
     for (int i = count - 1; i >= 0; i--) {
       String path = PreferencesData.get("last.sketch" + i + ".path");
       if (path == null) {
@@ -559,13 +565,46 @@ public class Base {
           // path unchanged.
         }
       }
-      int[] location = retrieveSketchLocation("" + i);
-      // If file did not exist, null will be returned for the Editor
-      if (handleOpen(new File(path), location, nextEditorLocation(), false, false) != null) {
-        opened++;
-      }
+      
+      options.add(path);
     }
-    return (opened > 0);
+    
+    // Show dialog
+    ArrayList<JCheckBox> checkboxList = new ArrayList<JCheckBox>();
+    for (String opt : options) {
+      JCheckBox box = new JCheckBox(opt);
+      box.setActionCommand(opt);
+      box.setSelected(true);
+      checkboxList.add(box);
+    }
+    
+    int chosenOption = JOptionPane.showConfirmDialog(null, checkboxList.toArray(new Object[checkboxList.size()]), tr("Restore last opened Sketchs ?"), JOptionPane.YES_NO_OPTION);
+   
+    if (chosenOption == JOptionPane.YES_OPTION) {
+      
+      Runnable runnable = new Runnable() {
+        public void run() {
+          try {
+            for (int j = 0; j < checkboxList.size(); j++) {
+              JCheckBox checkbox = checkboxList.get(j);
+              if(checkbox.isSelected()) {
+                int[] location = retrieveSketchLocation("" + j);
+                // If file did not exist, null will be returned for the Editor
+                handleOpen(new File(checkbox.getActionCommand()), location, nextEditorLocation(), false, false);
+              }
+            }
+            
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        }
+      };
+      
+      new Thread(runnable).start();
+      
+    }else {
+      handleNew();
+    }
   }
 
   /**
@@ -1173,16 +1212,22 @@ public class Base {
     Editor.sketchbookData = null;
     
     menu.removeAll();
-    addSketches(menu, BaseNoGui.getSketchbookFolder());
+    
+    SwingUtilities.invokeLater(new Runnable() {
+      @Override
+      public void run() {
+        addSketches(menu, BaseNoGui.getSketchbookFolder());
 
-    JMenu librariesMenu = JMenuUtils.findSubMenuWithLabel(menu, "libraries");
-    if (librariesMenu != null) {
-      menu.remove(librariesMenu);
-    }
-    JMenu hardwareMenu = JMenuUtils.findSubMenuWithLabel(menu, "hardware");
-    if (hardwareMenu != null) {
-      menu.remove(hardwareMenu);
-    }
+        JMenu librariesMenu = JMenuUtils.findSubMenuWithLabel(menu, "libraries");
+        if (librariesMenu != null) {
+          menu.remove(librariesMenu);
+        }
+        JMenu hardwareMenu = JMenuUtils.findSubMenuWithLabel(menu, "hardware");
+        if (hardwareMenu != null) {
+          menu.remove(hardwareMenu);
+        }
+      }
+    });
   }
 
   private LibraryList getSortedLibraries() {
@@ -1265,168 +1310,175 @@ public class Base {
     Editor.examplesData = null;
 
     menu.removeAll();
-
-    // Add examples from distribution "example" folder
-    JMenuItem label = new JMenuItem(tr("Built-in Examples"));
-    label.setEnabled(false);
-    menu.add(label);
-    boolean found = addSketches(menu, BaseNoGui.getExamplesFolder());
-    if (found) {
-      menu.addSeparator();
-    }
-
-    // Libraries can come from 4 locations: collect info about all four
-    String boardId = null;
-    String referencedPlatformName = null;
-    String myArch = null;
-    TargetPlatform targetPlatform = BaseNoGui.getTargetPlatform();
-    if (targetPlatform != null) {
-      myArch = targetPlatform.getId();
-      boardId = BaseNoGui.getTargetBoard().getName();
-      String core = BaseNoGui.getBoardPreferences().get("build.core", "arduino");
-      if (core.contains(":")) {
-        String refcore = core.split(":")[0];
-        TargetPlatform referencedPlatform = BaseNoGui.getTargetPlatform(refcore, myArch);
-        if (referencedPlatform != null) {
-          referencedPlatformName = referencedPlatform.getPreferences().get("name");
+    
+    SwingUtilities.invokeLater(new Runnable() {
+      
+      @Override
+      public void run() {
+     // Add examples from distribution "example" folder
+        JMenuItem label = new JMenuItem(tr("Built-in Examples"));
+        label.setEnabled(false);
+        menu.add(label);
+        boolean found = addSketches(menu, BaseNoGui.getExamplesFolder());
+        if (found) {
+          menu.addSeparator();
         }
-      }
-    }
 
-    // Divide the libraries into 7 lists, corresponding to the 4 locations
-    // with the retired IDE libs further divided into their own list, and
-    // any incompatible sketchbook libs further divided into their own list.
-    // The 7th list of "other" libraries should always be empty, but serves
-    // as a safety feature to prevent any library from vanishing.
-    LibraryList allLibraries = BaseNoGui.librariesIndexer.getInstalledLibraries();
-    LibraryList ideLibs = new LibraryList();
-    LibraryList retiredIdeLibs = new LibraryList();
-    LibraryList platformLibs = new LibraryList();
-    LibraryList referencedPlatformLibs = new LibraryList();
-    LibraryList sketchbookLibs = new LibraryList();
-    LibraryList sketchbookIncompatibleLibs = new LibraryList();
-    LibraryList otherLibs = new LibraryList();
-    for (UserLibrary lib : allLibraries) {
-      // Get the library's location - used for sorting into categories
-      Location location = lib.getLocation();
-      // Is this library compatible?
-      List<String> arch = lib.getArchitectures();
-      boolean compatible;
-      if (myArch == null || arch == null || arch.contains("*")) {
-        compatible = true;
-      } else {
-        compatible = arch.contains(myArch);
-      }
-      // IDE Libaries (including retired)
-      if (location == Location.IDE_BUILTIN) {
-        if (compatible) {
-          // only compatible IDE libs are shown
-          if (lib.getTypes().contains("Retired")) {
-            retiredIdeLibs.add(lib);
-          } else {
-            ideLibs.add(lib);
+        // Libraries can come from 4 locations: collect info about all four
+        String boardId = null;
+        String referencedPlatformName = null;
+        String myArch = null;
+        TargetPlatform targetPlatform = BaseNoGui.getTargetPlatform();
+        if (targetPlatform != null) {
+          myArch = targetPlatform.getId();
+          boardId = BaseNoGui.getTargetBoard().getName();
+          String core = BaseNoGui.getBoardPreferences().get("build.core", "arduino");
+          if (core.contains(":")) {
+            String refcore = core.split(":")[0];
+            TargetPlatform referencedPlatform = BaseNoGui.getTargetPlatform(refcore, myArch);
+            if (referencedPlatform != null) {
+              referencedPlatformName = referencedPlatform.getPreferences().get("name");
+            }
           }
         }
-      // Platform Libraries
-      } else if (location == Location.CORE) {
-        // all platform libs are assumed to be compatible
-        platformLibs.add(lib);
-      // Referenced Platform Libraries
-      } else if (location == Location.REFERENCED_CORE) {
-        // all referenced platform libs are assumed to be compatible
-        referencedPlatformLibs.add(lib);
-      // Sketchbook Libraries (including incompatible)
-      } else if (location == Location.SKETCHBOOK) {
-        if (compatible) {
-          // libraries promoted from sketchbook (behave as builtin)
-          if (!lib.getTypes().isEmpty() && lib.getTypes().contains("Arduino")
-              && lib.getArchitectures().contains("*")) {
-            ideLibs.add(lib);
+
+        // Divide the libraries into 7 lists, corresponding to the 4 locations
+        // with the retired IDE libs further divided into their own list, and
+        // any incompatible sketchbook libs further divided into their own list.
+        // The 7th list of "other" libraries should always be empty, but serves
+        // as a safety feature to prevent any library from vanishing.
+        LibraryList allLibraries = BaseNoGui.librariesIndexer.getInstalledLibraries();
+        LibraryList ideLibs = new LibraryList();
+        LibraryList retiredIdeLibs = new LibraryList();
+        LibraryList platformLibs = new LibraryList();
+        LibraryList referencedPlatformLibs = new LibraryList();
+        LibraryList sketchbookLibs = new LibraryList();
+        LibraryList sketchbookIncompatibleLibs = new LibraryList();
+        LibraryList otherLibs = new LibraryList();
+        for (UserLibrary lib : allLibraries) {
+          // Get the library's location - used for sorting into categories
+          Location location = lib.getLocation();
+          // Is this library compatible?
+          List<String> arch = lib.getArchitectures();
+          boolean compatible;
+          if (myArch == null || arch == null || arch.contains("*")) {
+            compatible = true;
           } else {
-            sketchbookLibs.add(lib);
+            compatible = arch.contains(myArch);
           }
-        } else {
-          sketchbookIncompatibleLibs.add(lib);
+          // IDE Libaries (including retired)
+          if (location == Location.IDE_BUILTIN) {
+            if (compatible) {
+              // only compatible IDE libs are shown
+              if (lib.getTypes().contains("Retired")) {
+                retiredIdeLibs.add(lib);
+              } else {
+                ideLibs.add(lib);
+              }
+            }
+          // Platform Libraries
+          } else if (location == Location.CORE) {
+            // all platform libs are assumed to be compatible
+            platformLibs.add(lib);
+          // Referenced Platform Libraries
+          } else if (location == Location.REFERENCED_CORE) {
+            // all referenced platform libs are assumed to be compatible
+            referencedPlatformLibs.add(lib);
+          // Sketchbook Libraries (including incompatible)
+          } else if (location == Location.SKETCHBOOK) {
+            if (compatible) {
+              // libraries promoted from sketchbook (behave as builtin)
+              if (!lib.getTypes().isEmpty() && lib.getTypes().contains("Arduino")
+                  && lib.getArchitectures().contains("*")) {
+                ideLibs.add(lib);
+              } else {
+                sketchbookLibs.add(lib);
+              }
+            } else {
+              sketchbookIncompatibleLibs.add(lib);
+            }
+          // Other libraries of unknown type (should never occur)
+          } else {
+            otherLibs.add(lib);
+          }
         }
-      // Other libraries of unknown type (should never occur)
-      } else {
-        otherLibs.add(lib);
-      }
-    }
 
-    // Add examples from libraries
-    if (!ideLibs.isEmpty()) {
-      ideLibs.sort();
-      label = new JMenuItem(tr("Examples for any board"));
-      label.setEnabled(false);
-      menu.add(label);
-    }
-    for (UserLibrary lib : ideLibs) {
-      addSketchesSubmenu(menu, lib);
-    }
+        // Add examples from libraries
+        if (!ideLibs.isEmpty()) {
+          ideLibs.sort();
+          label = new JMenuItem(tr("Examples for any board"));
+          label.setEnabled(false);
+          menu.add(label);
+        }
+        for (UserLibrary lib : ideLibs) {
+          addSketchesSubmenu(menu, lib);
+        }
 
-    if (!retiredIdeLibs.isEmpty()) {
-      retiredIdeLibs.sort();
-      JMenu retired = new JMenu(tr("RETIRED"));
-      menu.add(retired);
-      for (UserLibrary lib : retiredIdeLibs) {
-        addSketchesSubmenu(retired, lib);
-      }
-    }
+        if (!retiredIdeLibs.isEmpty()) {
+          retiredIdeLibs.sort();
+          JMenu retired = new JMenu(tr("RETIRED"));
+          menu.add(retired);
+          for (UserLibrary lib : retiredIdeLibs) {
+            addSketchesSubmenu(retired, lib);
+          }
+        }
 
-    if (!platformLibs.isEmpty()) {
-      menu.addSeparator();
-      platformLibs.sort();
-      label = new JMenuItem(format(tr("Examples for {0}"), boardId));
-      label.setEnabled(false);
-      menu.add(label);
-      for (UserLibrary lib : platformLibs) {
-        addSketchesSubmenu(menu, lib);
-      }
-    }
+        if (!platformLibs.isEmpty()) {
+          menu.addSeparator();
+          platformLibs.sort();
+          label = new JMenuItem(format(tr("Examples for {0}"), boardId));
+          label.setEnabled(false);
+          menu.add(label);
+          for (UserLibrary lib : platformLibs) {
+            addSketchesSubmenu(menu, lib);
+          }
+        }
 
-    if (!referencedPlatformLibs.isEmpty()) {
-      menu.addSeparator();
-      referencedPlatformLibs.sort();
-      label = new JMenuItem(format(tr("Examples for {0}"), referencedPlatformName));
-      label.setEnabled(false);
-      menu.add(label);
-      for (UserLibrary lib : referencedPlatformLibs) {
-        addSketchesSubmenu(menu, lib);
-      }
-    }
+        if (!referencedPlatformLibs.isEmpty()) {
+          menu.addSeparator();
+          referencedPlatformLibs.sort();
+          label = new JMenuItem(format(tr("Examples for {0}"), referencedPlatformName));
+          label.setEnabled(false);
+          menu.add(label);
+          for (UserLibrary lib : referencedPlatformLibs) {
+            addSketchesSubmenu(menu, lib);
+          }
+        }
 
-    if (!sketchbookLibs.isEmpty()) {
-      menu.addSeparator();
-      sketchbookLibs.sort();
-      label = new JMenuItem(tr("Examples from Custom Libraries"));
-      label.setEnabled(false);
-      menu.add(label);
-      for (UserLibrary lib : sketchbookLibs) {
-        addSketchesSubmenu(menu, lib);
-      }
-    }
+        if (!sketchbookLibs.isEmpty()) {
+          menu.addSeparator();
+          sketchbookLibs.sort();
+          label = new JMenuItem(tr("Examples from Custom Libraries"));
+          label.setEnabled(false);
+          menu.add(label);
+          for (UserLibrary lib : sketchbookLibs) {
+            addSketchesSubmenu(menu, lib);
+          }
+        }
 
-    if (!sketchbookIncompatibleLibs.isEmpty()) {
-      sketchbookIncompatibleLibs.sort();
-      JMenu incompatible = new JMenu(tr("INCOMPATIBLE"));
-      MenuScroller.setScrollerFor(incompatible);
-      menu.add(incompatible);
-      for (UserLibrary lib : sketchbookIncompatibleLibs) {
-        addSketchesSubmenu(incompatible, lib);
-      }
-    }
+        if (!sketchbookIncompatibleLibs.isEmpty()) {
+          sketchbookIncompatibleLibs.sort();
+          JMenu incompatible = new JMenu(tr("INCOMPATIBLE"));
+          MenuScroller.setScrollerFor(incompatible);
+          menu.add(incompatible);
+          for (UserLibrary lib : sketchbookIncompatibleLibs) {
+            addSketchesSubmenu(incompatible, lib);
+          }
+        }
 
-    if (!otherLibs.isEmpty()) {
-      menu.addSeparator();
-      otherLibs.sort();
-      label = new JMenuItem(tr("Examples from Other Libraries"));
-      label.setEnabled(false);
-      menu.add(label);
-      for (UserLibrary lib : otherLibs) {
-        addSketchesSubmenu(menu, lib);
+        if (!otherLibs.isEmpty()) {
+          menu.addSeparator();
+          otherLibs.sort();
+          label = new JMenuItem(tr("Examples from Other Libraries"));
+          label.setEnabled(false);
+          menu.add(label);
+          for (UserLibrary lib : otherLibs) {
+            addSketchesSubmenu(menu, lib);
+          }
+        }
       }
-    }
+    });
+    
   }
 
   private static String priorPlatformFolder;
@@ -1523,122 +1575,134 @@ public class Base {
 
   public void rebuildBoardsMenu() throws Exception {
     boardsCustomMenus = new LinkedList<>();
+    
+    SwingUtilities.invokeLater(new Runnable() {
+      @Override
+      public void run() {
+        // The first custom menu is the "Board" selection submenu
+        JMenu boardMenu = new JMenu(tr("Board"));
+        boardMenu.putClientProperty("removeOnWindowDeactivation", true);
+        MenuScroller.setScrollerFor(boardMenu).setTopFixedCount(1);
 
-    // The first custom menu is the "Board" selection submenu
-    JMenu boardMenu = new JMenu(tr("Board"));
-    boardMenu.putClientProperty("removeOnWindowDeactivation", true);
-    MenuScroller.setScrollerFor(boardMenu).setTopFixedCount(1);
+        boardMenu.add(new JMenuItem(new AbstractAction(tr("Boards Manager...")) {
+          public void actionPerformed(ActionEvent actionevent) {
+            String filterText = "";
+            String dropdownItem = "";
+            if (actionevent instanceof Event) {
+              Event e = ((Event) actionevent);
+              filterText = e.getPayload().get("filterText").toString();
+              dropdownItem = e.getPayload().get("dropdownItem").toString();
+            }
+            try {
+              openBoardsManager(filterText, dropdownItem);
+            } catch (Exception e) {
+              //TODO show error
+              e.printStackTrace();
+            }
+          }
+        }));
+        boardsCustomMenus.add(boardMenu);
 
-    boardMenu.add(new JMenuItem(new AbstractAction(tr("Boards Manager...")) {
-      public void actionPerformed(ActionEvent actionevent) {
-        String filterText = "";
-        String dropdownItem = "";
-        if (actionevent instanceof Event) {
-          Event e = ((Event) actionevent);
-          filterText = e.getPayload().get("filterText").toString();
-          dropdownItem = e.getPayload().get("dropdownItem").toString();
+        // If there are no platforms installed we are done
+        if (BaseNoGui.packages.size() == 0)
+          return;
+
+        // Separate "Install boards..." command from installed boards
+        boardMenu.add(new JSeparator());
+
+        // Generate custom menus for all platforms
+        for (TargetPackage targetPackage : BaseNoGui.packages.values()) {
+          for (TargetPlatform targetPlatform : targetPackage.platforms()) {
+            for (String customMenuTitle : targetPlatform.getCustomMenus().values()) {
+              JMenu customMenu = new JMenu(tr(customMenuTitle));
+              customMenu.putClientProperty("platform", getPlatformUniqueId(targetPlatform));
+              customMenu.putClientProperty("removeOnWindowDeactivation", true);
+              boardsCustomMenus.add(customMenu);
+            }
+          }
         }
-        try {
-          openBoardsManager(filterText, dropdownItem);
-        } catch (Exception e) {
-          //TODO show error
-          e.printStackTrace();
+
+        List<JMenuItem> menuItemsToClickAfterStartup = new LinkedList<>();
+
+        ButtonGroup boardsButtonGroup = new ButtonGroup();
+        Map<String, ButtonGroup> buttonGroupsMap = new HashMap<>();
+
+        List<JMenu> platformMenus = new ArrayList<>();
+
+        // Cycle through all packages
+        for (TargetPackage targetPackage : BaseNoGui.packages.values()) {
+          // For every package cycle through all platform
+          for (TargetPlatform targetPlatform : targetPackage.platforms()) {
+
+            // Add a title for each platform
+            String platformLabel = targetPlatform.getPreferences().get("name");
+            if (platformLabel == null)
+              platformLabel = targetPackage.getId() + "-" + targetPlatform.getId();
+
+            // add an hint that this core lives in sketchbook
+            if (targetPlatform.isInSketchbook())
+              platformLabel += " (in sketchbook)";
+
+            JMenu platformBoardsMenu = new JMenu(platformLabel);
+            MenuScroller.setScrollerFor(platformBoardsMenu);
+            platformMenus.add(platformBoardsMenu);
+
+            // Cycle through all boards of this platform
+            for (TargetBoard board : targetPlatform.getBoards().values()) {
+              if (board.getPreferences().get("hide") != null)
+                continue;
+              
+              try {
+                JMenuItem item = createBoardMenusAndCustomMenus(boardsCustomMenus, menuItemsToClickAfterStartup,
+                                                                buttonGroupsMap,
+                                                                board, targetPlatform, targetPackage);
+                platformBoardsMenu.add(item);
+                boardsButtonGroup.add(item);
+                
+              } catch (Exception e) {
+                e.printStackTrace();
+              }
+            }
+          }
+        }
+
+        platformMenus.sort((x,y) -> x.getText().compareToIgnoreCase(y.getText()));
+
+        JMenuItem firstBoardItem = null;
+        if (platformMenus.size() == 1) {
+          // When just one platform exists, add the board items directly,
+          // rather than using a submenu
+          for (Component boardItem : platformMenus.get(0).getMenuComponents()) {
+            boardMenu.add(boardItem);
+            if (firstBoardItem == null)
+              firstBoardItem = (JMenuItem)boardItem;
+          }
+        } else {
+          // For multiple platforms, use submenus
+          for (JMenu platformMenu : platformMenus) {
+            if (firstBoardItem == null && platformMenu.getItemCount() > 0)
+              firstBoardItem = platformMenu.getItem(0);
+            boardMenu.add(platformMenu);
+          }
+        }
+
+        if (firstBoardItem == null) {
+          throw new IllegalStateException("No available boards");
+        }
+
+        // If there is no current board yet (first startup, or selected
+        // board no longer defined), select first available board.
+        if (menuItemsToClickAfterStartup.isEmpty()) {
+          menuItemsToClickAfterStartup.add(firstBoardItem);
+        }
+
+        for (JMenuItem menuItemToClick : menuItemsToClickAfterStartup) {
+          menuItemToClick.setSelected(true);
+          menuItemToClick.getAction().actionPerformed(new ActionEvent(this, -1, ""));
         }
       }
-    }));
-    boardsCustomMenus.add(boardMenu);
-
-    // If there are no platforms installed we are done
-    if (BaseNoGui.packages.size() == 0)
-      return;
-
-    // Separate "Install boards..." command from installed boards
-    boardMenu.add(new JSeparator());
-
-    // Generate custom menus for all platforms
-    for (TargetPackage targetPackage : BaseNoGui.packages.values()) {
-      for (TargetPlatform targetPlatform : targetPackage.platforms()) {
-        for (String customMenuTitle : targetPlatform.getCustomMenus().values()) {
-          JMenu customMenu = new JMenu(tr(customMenuTitle));
-          customMenu.putClientProperty("platform", getPlatformUniqueId(targetPlatform));
-          customMenu.putClientProperty("removeOnWindowDeactivation", true);
-          boardsCustomMenus.add(customMenu);
-        }
-      }
-    }
-
-    List<JMenuItem> menuItemsToClickAfterStartup = new LinkedList<>();
-
-    ButtonGroup boardsButtonGroup = new ButtonGroup();
-    Map<String, ButtonGroup> buttonGroupsMap = new HashMap<>();
-
-    List<JMenu> platformMenus = new ArrayList<>();
-
-    // Cycle through all packages
-    for (TargetPackage targetPackage : BaseNoGui.packages.values()) {
-      // For every package cycle through all platform
-      for (TargetPlatform targetPlatform : targetPackage.platforms()) {
-
-        // Add a title for each platform
-        String platformLabel = targetPlatform.getPreferences().get("name");
-        if (platformLabel == null)
-          platformLabel = targetPackage.getId() + "-" + targetPlatform.getId();
-
-        // add an hint that this core lives in sketchbook
-        if (targetPlatform.isInSketchbook())
-          platformLabel += " (in sketchbook)";
-
-        JMenu platformBoardsMenu = new JMenu(platformLabel);
-        MenuScroller.setScrollerFor(platformBoardsMenu);
-        platformMenus.add(platformBoardsMenu);
-
-        // Cycle through all boards of this platform
-        for (TargetBoard board : targetPlatform.getBoards().values()) {
-          if (board.getPreferences().get("hide") != null)
-            continue;
-          JMenuItem item = createBoardMenusAndCustomMenus(boardsCustomMenus, menuItemsToClickAfterStartup,
-                  buttonGroupsMap,
-                  board, targetPlatform, targetPackage);
-          platformBoardsMenu.add(item);
-          boardsButtonGroup.add(item);
-        }
-      }
-    }
-
-    platformMenus.sort((x,y) -> x.getText().compareToIgnoreCase(y.getText()));
-
-    JMenuItem firstBoardItem = null;
-    if (platformMenus.size() == 1) {
-      // When just one platform exists, add the board items directly,
-      // rather than using a submenu
-      for (Component boardItem : platformMenus.get(0).getMenuComponents()) {
-        boardMenu.add(boardItem);
-        if (firstBoardItem == null)
-          firstBoardItem = (JMenuItem)boardItem;
-      }
-    } else {
-      // For multiple platforms, use submenus
-      for (JMenu platformMenu : platformMenus) {
-        if (firstBoardItem == null && platformMenu.getItemCount() > 0)
-          firstBoardItem = platformMenu.getItem(0);
-        boardMenu.add(platformMenu);
-      }
-    }
-
-    if (firstBoardItem == null) {
-      throw new IllegalStateException("No available boards");
-    }
-
-    // If there is no current board yet (first startup, or selected
-    // board no longer defined), select first available board.
-    if (menuItemsToClickAfterStartup.isEmpty()) {
-      menuItemsToClickAfterStartup.add(firstBoardItem);
-    }
-
-    for (JMenuItem menuItemToClick : menuItemsToClickAfterStartup) {
-      menuItemToClick.setSelected(true);
-      menuItemToClick.getAction().actionPerformed(new ActionEvent(this, -1, ""));
-    }
+    });
+    
   }
 
   private String getPlatformUniqueId(TargetPlatform platform) {
@@ -2576,6 +2640,19 @@ public class Base {
   public Editor getActiveEditor() {
     return activeEditor;
   }
+  
+  public Editor getWaitActiveEditor() {
+    while (getActiveEditor() == null) {
+      try {
+        Thread.sleep(200);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+    return getActiveEditor();
+  }
+  
+
 
   public boolean hasActiveEditor() {
     return activeEditor != null;

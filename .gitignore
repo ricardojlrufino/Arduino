@@ -19,6 +19,9 @@ build/windows/work/
 build/windows/*.zip
 build/windows/*.tgz
 build/windows/*.tar.bz2
+build/windows/*.tar.gz
+build/windows/work/
+build/windows/jre1.8*/
 build/windows/libastylej*
 build/windows/liblistSerials*
 build/windows/arduino-*.zip

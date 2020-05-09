@@ -26,6 +26,7 @@
   <condition property="platform" value="linuxaarch64"><os family="unix" arch="aarch64" /></condition>
 
   <condition property="windows_host" value="true"><os family="windows" /></condition>
+  <condition property="linux_host" value="true"><os family="unix" /></condition>
 
   <condition property="macosx"><equals arg1="${platform}" arg2="macosx" /></condition>
   <condition property="windows"><equals arg1="${platform}" arg2="windows" /></condition>
@@ -67,7 +68,7 @@
   <property name="launch4j-download-unpack-target-name" value="launch4j-linux"/>
 
   <property name="MACOSX_BUNDLED_JVM" value="${java.home}/../"/>
-  <property name="WINDOWS_BUNDLED_JVM" value="${java.home}"/>
+  <condition property="WINDOWS_BUNDLED_JVM" value="${java.home}"><os family="windows" /></condition>
   <property name="LINUX32_BUNDLED_JVM" value="none"/>
   <property name="LINUX64_BUNDLED_JVM" value="none"/>
   <property name="LINUXARM_BUNDLED_JVM" value="none"/>
@@ -145,7 +146,7 @@
   </target>
 
   <target name="dist" depends="revision-check" description="Build Arduino for distribution.">
-    <input message="Enter version number:" addproperty="version" defaultvalue="${revision}"/>
+    <input message="Enter version number:" addproperty="version" defaultvalue="${revision}" />    
     <condition property="full-version" value="${version}-${platform}">
       <not>
         <equals arg1="${portable}" arg2="true"/>
@@ -1010,8 +1011,21 @@
     </antcall>
   </target>
 
+  <!-- Download Windows JVM for linux host-->
+  <target name="windows-build-on-linux" if="linux_host">
+    <antcall target="untar-native">
+      <param name="archive_file" value="windows/jre-8u212-windows-i586.tar.gz"/>
+      <param name="archive_url" value="https://github.com/frekele/oracle-java/releases/download/8u212-b10/jre-8u212-windows-i586.tar.gz"/>
+      <param name="final_folder" value="windows/jre1.8.0_212"/>
+      <param name="dest_folder" value="windows/"/>
+    </antcall>
+    
+    <property name="WINDOWS_BUNDLED_JVM" value="${staging_folder}/jre1.8.0_212"/>
+
+  </target>
+
   <target name="windows-build"
-	  depends="revision-check, windows-checkos, subprojects-build"
+	  depends="revision-check, windows-checkos, subprojects-build, windows-build-on-linux"
 	  description="Build windows version">
     <mkdir dir="windows/work" />
     <mkdir dir="windows/work/${staging_hardware_folder}" />
