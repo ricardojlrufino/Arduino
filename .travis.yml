@@ -1,6 +1,11 @@
 language: java
 dist: trusty
 
+addons:
+  apt:
+    packages:
+    - binutils-mingw-w64-x86-64
+
 matrix:
   include:
     - env:
@@ -9,6 +14,7 @@ matrix:
     - env:
         - TARGET=windows
         - TARGET_FOLDER=windows
+
     # - env:
     #     - TARGET=macosx
 
