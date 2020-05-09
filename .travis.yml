@@ -14,3 +14,5 @@ deploy:
   file: "./build/linux/arduino-1.8.13-rjlr-linux64.tar.xz"
   skip_cleanup: 'true'
   draft: true
+  on:
+    all_branches: true
