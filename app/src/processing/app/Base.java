@@ -42,6 +42,11 @@ import cc.arduino.packages.Uploader;
 import cc.arduino.view.Event;
 import cc.arduino.view.JMenuUtils;
 import cc.arduino.view.SplashScreenHelper;
+import cc.arduino.view.treeselector.TreeSelectorDialog;
+import cc.arduino.view.treeselector.impl.ExamplesDataService;
+import cc.arduino.view.treeselector.impl.SketchDataService;
+import cc.arduino.view.treeselector.impl.SketchSelectorDialog;
+
 import com.github.zafarkhaja.semver.Version;
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -1073,18 +1078,108 @@ public class Base {
     });
     menu.add(item);
     menu.addSeparator();
+    
+    item = new JMenuItem(tr("Sketchbook..."));
+    item.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        try {
+          showSketchbookDialog();
+        } catch (Exception e1) {
+          e1.printStackTrace();
+        }
+      }
+    });
+    menu.add(item);
+    
+    
+    item = new JMenuItem(tr("Examples")+"...");
+    item.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        try {
+          showExemplesDialog();
+        } catch (Exception e1) {
+          e1.printStackTrace();
+        }
+      }
+    });
+    menu.add(item);
+    
+    
 
-    // Add a list of all sketches and subfolders
-    boolean sketches = addSketches(menu, BaseNoGui.getSketchbookFolder());
-    if (sketches) menu.addSeparator();
+//    // Add a list of all sketches and subfolders
+//    boolean sketches = addSketches(menu, BaseNoGui.getSketchbookFolder());
+//    if (sketches) menu.addSeparator();
 
     // Add each of the subfolders of examples directly to the menu
-    boolean found = addSketches(menu, BaseNoGui.getExamplesFolder());
-    if (found) menu.addSeparator();
+//    boolean found = addSketches(menu, BaseNoGui.getExamplesFolder());
+//    if (found) menu.addSeparator();
   }
 
+  protected void showSketchbookDialog() {
+    
+    ActionListener clickListener = new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        Object source = e.getSource();
+        if(! (source instanceof File)) return;
+        File file = (File) source;
+        
+        if (file.exists()) {
+          try {
+            if(!file.isDirectory()) handleOpen(file);
+          } catch (Exception e1) {
+            e1.printStackTrace();
+          }
+        } else {
+          showWarning(tr("Sketch Does Not Exist"),
+                  tr("The selected sketch no longer exists.\n"
+                          + "You may need to restart Arduino to update\n"
+                          + "the sketchbook menu."), null);
+        }
+      }
+    };
+    
+    if(Editor.sketchbookData == null) {
+      Editor.sketchbookData = new SketchDataService(BaseNoGui.getSketchbookFolder());
+    }
+
+    SketchSelectorDialog.showDialog("Sketchbook", Editor.sketchbookData, clickListener);
+     
+  }
+  
+  protected void showExemplesDialog() {
+    ActionListener clickListener = new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        
+        Object source = e.getSource();
+        if(! (source instanceof File)) return;
+        File file = (File) source;
+        if (file.exists()) {
+          try {
+            if(!file.isDirectory()) handleOpen(file);
+          } catch (Exception e1) {
+            e1.printStackTrace();
+          }
+        } else {
+          showWarning(tr("Sketch Does Not Exist"),
+                  tr("The selected sketch no longer exists.\n"
+                          + "You may need to restart Arduino to update\n"
+                          + "the sketchbook menu."), null);
+        }
+      }
+    };
+    
+    if(Editor.examplesData == null) {
+      Editor.examplesData = new ExamplesDataService();
+    }
+    
+    SketchSelectorDialog.showDialog(tr("Examples"), Editor.examplesData, clickListener);
+  }
 
   protected void rebuildSketchbookMenu(JMenu menu) {
+    
+    // Clear cache of Dialog "version"
+    Editor.sketchbookData = null;
+    
     menu.removeAll();
     addSketches(menu, BaseNoGui.getSketchbookFolder());
 
@@ -1173,6 +1268,9 @@ public class Base {
     if (menu == null) {
       return;
     }
+    
+    // Clear cache of Dialog "version"
+    Editor.examplesData = null;
 
     menu.removeAll();
 

@@ -95,6 +95,7 @@ import cc.arduino.packages.uploaders.SerialUploader;
 import cc.arduino.view.GoToLineNumber;
 import cc.arduino.view.StubMenuListener;
 import cc.arduino.view.findreplace.FindReplace;
+import cc.arduino.view.treeselector.TreeSelectorDataSource;
 import jssc.SerialPortException;
 import processing.app.debug.RunnerException;
 import processing.app.debug.TargetBoard;
@@ -192,6 +193,10 @@ public class Editor extends JFrame implements RunnerListener {
   static JMenu sketchbookMenu;
   static JMenu examplesMenu;
   static JMenu importMenu;
+
+  // these 'chaches' are shared so that they needn't be rebuilt for all windows
+  static TreeSelectorDataSource examplesData;
+  static TreeSelectorDataSource sketchbookData;
 
   private static JMenu portMenu;
 
