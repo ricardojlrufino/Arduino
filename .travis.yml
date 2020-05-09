@@ -1,10 +1,11 @@
 language: java
 dist: trusty
 before_script:
-- export VERSION=$(grep "VERSION_NAME" ../arduino-core/src/processing/app/BaseNoGui.java | head -n 1 | awk '{print $7}' |sed 's/^"\(.*\)".*/\1/')
-script: cd ./build && ant -Dversion=$VERSION-rjlr dist
+- export VERSION=$(grep "VERSION_NAME" arduino-core/src/processing/app/BaseNoGui.java | head -n 1 | awk '{print $7}' |sed 's/^"\(.*\)".*/\1/')
+# script: cd ./build && ant -Dversion=${VERSION}-rjlr dist
+script: cd ./build && echo "$VERSION"
 before_deploy:
-- export VERSION=$(grep "VERSION_NAME" ../arduino-core/src/processing/app/BaseNoGui.java | head -n 1 | awk '{print $7}' |sed 's/^"\(.*\)".*/\1/')
+# - export VERSION=$(grep "VERSION_NAME" ../arduino-core/src/processing/app/BaseNoGui.java | head -n 1 | awk '{print $7}' |sed 's/^"\(.*\)".*/\1/')
 - echo "XXXXXXXXXXXXX - Using $VERSION"
 - git config --local user.name "Ricardo JL Rufino"
 - git config --local user.email "ricardo.jl.rufino@gmail.com"
