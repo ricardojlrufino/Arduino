@@ -64,7 +64,7 @@
     <equals arg1="${platform}" arg2="linuxaarch64"/>
   </condition>
 
-  <condition property="launch4j-download-unpack-target-name" value="launch4j-windows"><equals arg1="${platform}" arg2="windows" /></condition>
+  <condition property="launch4j-download-unpack-target-name" value="launch4j-windows"><os family="windows" /></condition>
   <property name="launch4j-download-unpack-target-name" value="launch4j-linux"/>
 
   <property name="MACOSX_BUNDLED_JVM" value="${java.home}/../"/>
