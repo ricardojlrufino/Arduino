@@ -1,6 +1,6 @@
 language: java
 dist: trusty
-script: cd ./build && ant dist
+script: cd ./build && ant -Dversion=1.8.13-rjlr dist
 before_deploy:
 - echo "XXXX GET FILE NAME"
 deploy: 
