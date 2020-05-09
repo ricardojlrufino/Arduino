@@ -2,13 +2,15 @@ language: java
 dist: trusty
 
 before_install:
-  - sudo apt-get -y install binutils-mingw-w64-x86-64
+  - sudo apt-get -y install lib32z1 lib32ncurses5 lib32bz2-1.0
+  # - ln -sf /usr/bin/x86_64-w64-mingw32-ld /home/javydreamercsw/NetBeansProjects/pcgen/build/tmp/launch4j/bin-launch4j-3.9/bin/ld
+  # - ln -sf /usr/bin/x86_64-w64-mingw32-windres /home/javydreamercsw/NetBeansProjects/pcgen/build/tmp/launch4j/bin-launch4j-3.9/bin/windres
 
 matrix:
   include:
-    - env:
-        - TARGET=linux64
-        - TARGET_FOLDER=linux
+    # - env:
+    #     - TARGET=linux64
+    #     - TARGET_FOLDER=linux
     - env:
         - TARGET=windows
         - TARGET_FOLDER=windows
