@@ -1105,14 +1105,6 @@ public class Base {
     menu.add(item);
     
     
-
-//    // Add a list of all sketches and subfolders
-//    boolean sketches = addSketches(menu, BaseNoGui.getSketchbookFolder());
-//    if (sketches) menu.addSeparator();
-
-    // Add each of the subfolders of examples directly to the menu
-//    boolean found = addSketches(menu, BaseNoGui.getExamplesFolder());
-//    if (found) menu.addSeparator();
   }
 
   protected void showSketchbookDialog() {
