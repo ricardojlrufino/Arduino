@@ -1,11 +1,15 @@
 language: java
 dist: trusty
-script: cd ./build && ant -Dversion=1.8.13-rjlr dist
+before_script:
+- export VERSION=$(grep "VERSION_NAME" ../arduino-core/src/processing/app/BaseNoGui.java | head -n 1 | awk '{print $7}' |sed 's/^"\(.*\)".*/\1/')
+script: cd ./build && ant -Dversion=$VERSION-rjlr dist
 before_deploy:
-- echo "XXXX GET FILE NAME"
+- export VERSION=$(grep "VERSION_NAME" ../arduino-core/src/processing/app/BaseNoGui.java | head -n 1 | awk '{print $7}' |sed 's/^"\(.*\)".*/\1/')
+- echo "XXXXXXXXXXXXX - Using $VERSION"
 - git config --local user.name "Ricardo JL Rufino"
 - git config --local user.email "ricardo.jl.rufino@gmail.com"
-- export TRAVIS_TAG=${TRAVIS_TAG:-$(date +'%Y%m%d%H%M%S')-$(git log --format=%h -1)}
+# - export TRAVIS_TAG=${TRAVIS_TAG:-$(date +'%Y%m%d%H%M%S')-$(git log --format=%h -1)}
+- export TRAVIS_TAG=$VERSION-$(date +'%Y%m%d%H%M%S')
 - git tag $TRAVIS_TAG
 deploy: 
   provider: releases
