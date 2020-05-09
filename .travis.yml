@@ -8,11 +8,13 @@ before_install:
   # - /var/lib/dpkg/info/ca-certificates-java.postinst configure
 matrix:
   include:
-    - env:
+    - name: "Windows Build"
+      env:
         - TARGET=linux64
         - TARGET_FOLDER=linux
         - TARGET_PKG=tar.xz
-    - env:
+    - name: "Linux Build"
+      env:
         - TARGET=windows
         - TARGET_FOLDER=windows
         - TARGET_PKG=zip
@@ -33,7 +35,8 @@ before_deploy:
 - git config --local user.name "Ricardo JL Rufino"
 - git config --local user.email "ricardo.jl.rufino@gmail.com"
 # - export TRAVIS_TAG=${TRAVIS_TAG:-$(date +'%Y%m%d%H%M%S')-$(git log --format=%h -1)}
-- export TRAVIS_TAG=$VERSION-$(date +'%Y%m%d%H%M%S')
+# - export TRAVIS_TAG=$VERSION-$(date +'%Y%m%d%H%M%S')
+- export TRAVIS_TAG="preview"
 - git tag $TRAVIS_TAG
 
 
