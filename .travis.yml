@@ -1,9 +1,19 @@
 language: java
 dist: trusty
+
+matrix:
+  include:
+    - env:
+        - TARGET=linux
+    - env:
+        - TARGET=windows
+    - env:
+        - TARGET=macosx
+
 before_script:
 - export VERSION=$(grep "VERSION_NAME" arduino-core/src/processing/app/BaseNoGui.java | head -n 1 | awk '{print $7}' |sed 's/^"\(.*\)".*/\1/')
 - export VERSION=${VERSION}-BETA-rjlr
-script: cd ./build && ant -Dversion=${VERSION} dist
+script: cd ./build && ant -Dversion=${VERSION} -Dplatform=$TARGET dist
 # script: cd ./build && echo "$VERSION"
 before_deploy:
 # - export VERSION=$(grep "VERSION_NAME" ../arduino-core/src/processing/app/BaseNoGui.java | head -n 1 | awk '{print $7}' |sed 's/^"\(.*\)".*/\1/')
@@ -17,7 +27,7 @@ deploy:
   provider: releases
   api_key:
     secure: s3UsHvegodagPUvfoPoIvXiWoApGjWj7ggRQFw3tphiE8oK+uL3t1JQMKPLTNL2Zu4xJCNYTOdMH7WOwuoz2W8OIMhbcmfjJgDA9OnFi6x1RsW6fGHfnZpk3jjJ5SsS0ySv2v7bbfxzLtmj50R8k/kEYMoAMSycwOXdz61qchZrbp/Uhv8f8lV9AgxXzcEhkmrMwBqpFSMfkdIPUlJElHgJIfTBphXodpfhXblW5FJZ3GjmASj2vm3ra03uFlxioIdLi1oXUqmwQq3YDvZaxyx1vk15RrB33r1MMXwk6jGpg5wGj2PGj6VanGfqOapsN74IKdlC2fBafGzvjUWcYpINiObE4oZ+u8rtyFp1ysi99YZJo3/DrZzvLqmr9hv3ULiXwJFWPibR8zj0Nhf1W+oCpOL01mUc8TIMw8UBODnCfT5lMQRuj3WAh7kOfYGF3zpdfI6g3aisexJKXur3C74EuZ8m4yd3sucpDHUBmHx7POZ0uz7npZIUWm+GO46tM/h9h1z3ltPwfL/TPUIkPcPHBnEnqzga4aIeyRwyV0ZnzeiRocaQ8pu8XdrnQxre3eHzTA/PLDsPUFDHwhQ++ybGBpewI1H0Mfz9r206vBKLH32OIwTFC0HiEwM23YGuhqcHhwzVw+PfRkiZ5a0HhyaTlH5yVDJlu+n9sboU8Rzc=
-  file: "/home/travis/build/ricardojlrufino/Arduino/build/linux/arduino-${VERSION}-linux64.tar.xz"
+  file: "/home/travis/build/ricardojlrufino/Arduino/build/$TARGET/arduino-${VERSION}-linux64.tar.xz"
   skip_cleanup: 'true'
   draft: true
   on:
