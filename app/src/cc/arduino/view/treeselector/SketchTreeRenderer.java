@@ -12,6 +12,10 @@ import javax.swing.JTree;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 
+import org.fife.ui.rsyntaxtextarea.Theme;
+
+import processing.app.BaseNoGui;
+
 public class SketchTreeRenderer extends DefaultTreeCellRenderer {
   private static final String SPAN_FORMAT = "<span style='color:%s;'>%s</span>";
   private static final String SPAN_CATEGORY_FORMAT = "<span style='color:%s;'> --- %s ---</span>";
@@ -21,8 +25,10 @@ public class SketchTreeRenderer extends DefaultTreeCellRenderer {
 
   public SketchTreeRenderer(Supplier<String> filterTextSupplier) {
     this.filterTextSupplier = filterTextSupplier;
-    Icon leafIcon = new ImageIcon(getClass().getResource("script.png"));
-    Icon folder = new ImageIcon(getClass().getResource("folder.png"));
+    
+    File dir = new File(BaseNoGui.getContentFile("lib"), "icons/16x16");
+    Icon leafIcon = new ImageIcon(new File(dir, "script.png").getAbsolutePath());
+    Icon folder = new ImageIcon(new File(dir, "folder.png").getAbsolutePath());
     setClosedIcon(folder);
     setOpenIcon(folder);
     setLeafIcon(leafIcon);
