@@ -40,9 +40,10 @@ import java.awt.event.FocusListener;
 public class FilterJTextField extends JPlaceholderTextField {
 
   private Timer timer;
+  private int minSearchLengh = 0; // 0 == disabled min length
   
   public FilterJTextField(String hint) {
-    this(hint, 1000);
+    this(hint, 500);
   }
 
   public FilterJTextField(String hint, int delay) {
@@ -56,11 +57,11 @@ public class FilterJTextField extends JPlaceholderTextField {
 
     getDocument().addDocumentListener(new DocumentListener() {
       public void removeUpdate(DocumentEvent e) {
-        spawnTimer();
+        if(checkLength()) spawnTimer();
       }
 
       public void insertUpdate(DocumentEvent e) {
-        spawnTimer();
+        if(checkLength()) spawnTimer();
       }
 
       public void changedUpdate(DocumentEvent e) {
@@ -82,15 +83,33 @@ public class FilterJTextField extends JPlaceholderTextField {
     }
     timer.start();
   }
+  
+  /**
+   * Validate search length
+   * @return
+   */
+  private boolean checkLength() {
+    String filter = getText();
+    return !(minSearchLengh > 0 && filter.length() !=0 && filter.length() < minSearchLengh);
+  }
 
   public void applyFilter() {
     String filter = getText();
+    
     filter = filter.toLowerCase();
 
     // Replace anything but 0-9, a-z, or : with a space
     filter = filter.replaceAll("[^\\x30-\\x39^\\x61-\\x7a^\\x3a]", " ");
 
     onFilter(filter.split(" "));
+  }
+  
+  public void setMinSearchLengh(int minSearchLengh) {
+    this.minSearchLengh = minSearchLengh;
+  }
+  
+  public int getMinSearchLengh() {
+    return minSearchLengh;
   }
 
   protected void onFilter(String[] strings) {
