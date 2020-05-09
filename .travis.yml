@@ -11,7 +11,7 @@ matrix:
     - env:
         - TARGET=linux64
         - TARGET_FOLDER=linux
-        - TARGET_PKG=tar.gz
+        - TARGET_PKG=tar.xz
     - env:
         - TARGET=windows
         - TARGET_FOLDER=windows
@@ -41,8 +41,10 @@ deploy:
   provider: releases
   api_key:
     secure: s3UsHvegodagPUvfoPoIvXiWoApGjWj7ggRQFw3tphiE8oK+uL3t1JQMKPLTNL2Zu4xJCNYTOdMH7WOwuoz2W8OIMhbcmfjJgDA9OnFi6x1RsW6fGHfnZpk3jjJ5SsS0ySv2v7bbfxzLtmj50R8k/kEYMoAMSycwOXdz61qchZrbp/Uhv8f8lV9AgxXzcEhkmrMwBqpFSMfkdIPUlJElHgJIfTBphXodpfhXblW5FJZ3GjmASj2vm3ra03uFlxioIdLi1oXUqmwQq3YDvZaxyx1vk15RrB33r1MMXwk6jGpg5wGj2PGj6VanGfqOapsN74IKdlC2fBafGzvjUWcYpINiObE4oZ+u8rtyFp1ysi99YZJo3/DrZzvLqmr9hv3ULiXwJFWPibR8zj0Nhf1W+oCpOL01mUc8TIMw8UBODnCfT5lMQRuj3WAh7kOfYGF3zpdfI6g3aisexJKXur3C74EuZ8m4yd3sucpDHUBmHx7POZ0uz7npZIUWm+GO46tM/h9h1z3ltPwfL/TPUIkPcPHBnEnqzga4aIeyRwyV0ZnzeiRocaQ8pu8XdrnQxre3eHzTA/PLDsPUFDHwhQ++ybGBpewI1H0Mfz9r206vBKLH32OIwTFC0HiEwM23YGuhqcHhwzVw+PfRkiZ5a0HhyaTlH5yVDJlu+n9sboU8Rzc=
-  file: "/home/travis/build/ricardojlrufino/Arduino/build/$TARGET_FOLDER/arduino-${VERSION}-$TARGET.$TARGET_PKG"
-  skip_cleanup: 'true'
+  file: "/home/travis/build/ricardojlrufino/Arduino/build/$TARGET_FOLDER/arduino-${VERSION}-*"
+  skip_cleanup: true
   draft: true
+  overwrite: true
+  file_glob: true
   on:
     all_branches: true
