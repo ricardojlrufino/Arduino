@@ -75,6 +75,8 @@ import java.awt.event.*;
 import java.io.*;
 import java.util.List;
 import java.util.Timer;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.*;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -131,6 +133,9 @@ public class Base {
 
   private PdeKeywords pdeKeywords;
   private final List<JMenuItem> recentSketchesMenuItems = new LinkedList<>();
+  
+  // Executor to load / reload menus in backgroud.
+  private Executor menuExecutor = Executors.newCachedThreadPool();
 
   static public void main(String args[]) throws Exception {
     if (!OSUtils.isWindows()) {
@@ -1088,14 +1093,10 @@ public class Base {
   public void rebuildSketchbookMenus() {
     //System.out.println("async enter");
     //new Exception().printStackTrace();
-    SwingUtilities.invokeLater(new Runnable() {
-      public void run() {
-        //System.out.println("starting rebuild");
-        rebuildSketchbookMenu(Editor.sketchbookMenu);
-        rebuildToolbarMenu(Editor.toolbarMenu);
-        //System.out.println("done with rebuild");
-      }
-    });
+    //System.out.println("starting rebuild");
+    rebuildSketchbookMenu(Editor.sketchbookMenu);
+    rebuildToolbarMenu(Editor.toolbarMenu);
+    //System.out.println("done with rebuild");
     //System.out.println("async exit");
   }
 
@@ -1212,12 +1213,12 @@ public class Base {
     Editor.sketchbookData = null;
     
     menu.removeAll();
-    
-    SwingUtilities.invokeLater(new Runnable() {
-      @Override
-      public void run() {
-        addSketches(menu, BaseNoGui.getSketchbookFolder());
 
+    // Execute in backgroud thread, no need UI thread becouse no rendering needed
+    menuExecutor.execute(() -> {
+      
+        addSketches(menu, BaseNoGui.getSketchbookFolder());
+    
         JMenu librariesMenu = JMenuUtils.findSubMenuWithLabel(menu, "libraries");
         if (librariesMenu != null) {
           menu.remove(librariesMenu);
@@ -1226,8 +1227,8 @@ public class Base {
         if (hardwareMenu != null) {
           menu.remove(hardwareMenu);
         }
-      }
     });
+    
   }
 
   private LibraryList getSortedLibraries() {
@@ -1311,10 +1312,8 @@ public class Base {
 
     menu.removeAll();
     
-    SwingUtilities.invokeLater(new Runnable() {
-      
-      @Override
-      public void run() {
+    // Execute in backgroud thread, no need UI thread becouse no rendering needed
+    menuExecutor.execute(() -> {
      // Add examples from distribution "example" folder
         JMenuItem label = new JMenuItem(tr("Built-in Examples"));
         label.setEnabled(false);
@@ -1476,7 +1475,6 @@ public class Base {
             addSketchesSubmenu(menu, lib);
           }
         }
-      }
     });
     
   }
@@ -1576,9 +1574,8 @@ public class Base {
   public void rebuildBoardsMenu() throws Exception {
     boardsCustomMenus = new LinkedList<>();
     
-    SwingUtilities.invokeLater(new Runnable() {
-      @Override
-      public void run() {
+    // Execute in backgroud thread, no need UI thread becouse no rendering needed
+    menuExecutor.execute(() -> {
         // The first custom menu is the "Board" selection submenu
         JMenu boardMenu = new JMenu(tr("Board"));
         boardMenu.putClientProperty("removeOnWindowDeactivation", true);
@@ -1700,7 +1697,6 @@ public class Base {
           menuItemToClick.setSelected(true);
           menuItemToClick.getAction().actionPerformed(new ActionEvent(this, -1, ""));
         }
-      }
     });
     
   }
