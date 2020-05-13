@@ -18,3 +18,6 @@ https://github.com/arduino/Arduino/pulls?q=is%3Apr+author%3Aricardojlrufino
 - Forked repository does not have its own issue reporter tab
 
 - If you need a IoT / Home Automation ? Please see https://github.com/OpenDevice/OpenDevice  (you can open issues here)
+
+-  More complex requests and technical discussion should go on the [Arduino Developers
+mailing list](https://groups.google.com/a/arduino.cc/forum/#!forum/developers)

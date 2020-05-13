@@ -167,7 +167,7 @@
     </java>
   </target>
 
-  <target name="test" depends="subprojects-test"/>
+  <target name="test" depends="subprojects-build, subprojects-test"/>
 
   <!-- - - - - - - - - - - - - - - - - - -->
   <!-- Subprojects: Core, App, Libraries -->
@@ -184,7 +184,14 @@
   </target>
 
   <target name="subprojects-test">
-    <subant buildpath="../app" target="test"/>
+    <subant buildpath="../app" target="test">
+      <propertyset>
+        <!-- Forward these to subant. Use propertyset/propertyref instead of a direct property so we do not need to specify a value -->
+        <propertyref name="single-test-class"/>
+        <propertyref name="single-test-methods"/>
+        <propertyref name="running-from-github-actions"/>
+      </propertyset>
+    </subant>
   </target>
 
   <!-- - - - - - - - - -->
@@ -238,10 +245,6 @@
 
   <!-- copy library folder -->
   <target name="assemble-libraries" unless="light_bundle">
-    <copy todir="${target.path}/libraries">
-      <fileset dir="../libraries"/>
-    </copy>
-
     <download-library name="Ethernet" version="2.0.0"/>
     <download-library name="GSM" version="1.0.6"/>
     <download-library name="Stepper" version="1.1.3"/>
