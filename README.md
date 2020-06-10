@@ -15,7 +15,7 @@ https://github.com/arduino/Arduino/pulls?q=is%3Apr+author%3Aricardojlrufino
 
 ## Bug reports and technical discussions
 
-- Add a Issue https://github.com/ricardojlrufino/Arduino/issues
+- Add a [Issue](https://github.com/ricardojlrufino/Arduino/issues) 
 
 - If you need a IoT / Home Automation ? Please see https://github.com/OpenDevice/OpenDevice  (you can open issues here)
 
