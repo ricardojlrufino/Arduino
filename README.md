@@ -19,4 +19,4 @@ https://github.com/arduino/Arduino/pulls?q=is%3Apr+author%3Aricardojlrufino
 
 - If you need a IoT / Home Automation ? Please see https://github.com/OpenDevice/OpenDevice  (you can open issues here)
 
-- More complex requests and technical discussion should go on the [Discord](https://discord.gg/wjD5Qk)
+- More complex requests and technical discussion should go on the [Discord](https://discord.gg/M2qGhm)
